@@ -4,6 +4,11 @@
 
 custom_require.call(%w[common common-travel])
 
+def initialize
+  @settings = get_settings
+  @bag = @settings.crafting_container
+end
+
 loop do
   DRCT.walk_to(19_065)
   break if DRRoom.pcs.empty?
@@ -46,4 +51,4 @@ until DRC.left_hand || DRC.right_hand
   end
 end
 
-fput('stow my cloth')
+fput("put my cloth in my #{@bag}")
