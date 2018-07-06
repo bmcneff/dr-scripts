@@ -4,10 +4,8 @@
 
 custom_require.call(%w[common common-travel])
 
-def initialize
-  @settings = get_settings
-  @bag = @settings.crafting_container
-end
+@settings = get_settings
+@bag = @settings.crafting_container
 
 loop do
   DRCT.walk_to(19_065)
