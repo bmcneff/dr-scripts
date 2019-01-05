@@ -1,12 +1,11 @@
 =begin
   Documentation: https://elanthipedia.play.net/Lich_script_repository#combat-trainer
 =end
-custom_require.call(%w[common common-arcana common-healing common-items common-summoning common-travel drinfomon equipmanager events spellmonitor])
+custom_require.call(%w[common common-arcana common-healing common-items common-summoning drinfomon equipmanager events spellmonitor])
 
 class SetupProcess
   include DRC
   include DRCS
-  include DRCT
 
   def initialize(settings, equipment_manager)
     @equipment_manager = equipment_manager
@@ -22,13 +21,22 @@ class SetupProcess
     echo("  @cycle_armors: #{@cycle_armors}") if $debug_mode_ct
     @cycle_armors_time = settings.cycle_armors_time
     echo("  @cycle_armors_time: #{@cycle_armors_time}") if $debug_mode_ct
+    @armor_hysteresis = settings.cycle_armors_hysteresis
+    echo("  @armor_hysteresis: #{@armor_hysteresis}") if $debug_mode_ct
     @last_cycle_time = Time.now - @cycle_armors_time
     @combat_training_abilities_target = settings.combat_training_abilities_target
     echo("  @combat_training_abilities_target: #{@combat_training_abilities_target}") if $debug_mode_ct
+    @cycle_regalia = settings.cycle_armors_regalia
+    echo("  @cycle_regalia: #{@cycle_regalia}") if $debug_mode_ct
+    @default_armor = settings.default_armor_type
+    echo("  @default_armor: #{@default_armor}") if $debug_mode_ct
 
+    @gearsets = settings.gear_sets
     @warhorn = settings.warhorn
     echo("  @warhorn: #{@warhorn}") if $debug_mode_ct
     @last_warhorn = Time.now - 305
+
+    validate_regalia(settings)
 
     return unless @warhorn
 
@@ -79,7 +87,7 @@ class SetupProcess
       check_stance(game_state)
     end
 
-    check_armor_swap(game_state)
+    @cycle_regalia ? check_regalia_swap(game_state) : check_armor_swap(game_state)
     false
   end
 
@@ -93,19 +101,48 @@ class SetupProcess
 
     case bput("#{@warhorn_get_verb} my #{@warhorn}", 'You get', 'You remove', 'You take', 'What were you referring to', 'You need a free hand', 'Remove what')
     when 'You get', 'You remove', 'You take'
-      bput('exhale warhorn lure', 'You sound a series of bursts from the warhorn', 'Your lungs are tired from having sounded a warhorn so recently.')
+      if @warhorn.casecmp('egg').zero?
+        bput("invoke #{@warhorn}", 'light envelops the area briefly', 'light within the egg', 'Something about the area inhibits')
+      else
+        bput("exhale #{@warhorn} lure", 'You sound a series of bursts from the', 'Your lungs are tired from having sounded a')
+      end
       @last_warhorn = Time.now
       waitrt?
       bput("#{@warhorn_store_verb} my #{@warhorn}", 'You put', 'You attach')
     when 'What were you referring to'
-      echo "#{warhorn} NOT FOUND! Removing from hunt."
+      echo "#{@warhorn} NOT FOUND! Removing from hunt."
       @warhorn = nil
     end
 
     game_state.wield_whirlwind_offhand
   end
 
+  def armor_hysteresis?
+    return false unless @armor_hysteresis
+    return false if @cycle_armors.keys.any? { |skill| DRSkill.getxp(skill) < 25 }
+    if @cycle_armors.keys.all? { |skill| DRSkill.getxp(skill) > 32 }
+      if @last_worn_type != @default_armor && @cycle_armors.keys.include?(@default_armor)
+        @equipment_manager.worn_items(@all_swap_pieces).each { |item| @equipment_manager.remove_item(item) }
+        @equipment_manager.wear_items(@equipment_manager.desc_to_items(@cycle_armors[@default_armor]))
+        @last_worn_type = @default_armor
+      end
+    end
+    true
+  end
+
+  def regalia_hysteresis?(game_state)
+    return false unless @armor_hysteresis
+    # Override hysteresis logic if regalia is about to expire.
+    return false if @cycle_regalia.any? { |skill| DRSkill.getxp(skill) < 22 } || game_state.last_regalia_type.nil? || Flags['ct-regalia-expired']
+    if @cycle_regalia.all? { |skill| DRSkill.getxp(skill) > 24 } && game_state.last_regalia_type != @default_armor
+      return false if Time.now - @last_cycle_time < @cycle_armors_time
+      game_state.swap_regalia_type = @cycle_regalia.include?(@default_armor) ? @default_armor : @cycle_regalia.max_by { |skill| DRSkill.getrank(skill) } # If no default type declared, go by the highest rank.
+    end
+    true
+  end
+
   def check_armor_swap(game_state)
+    return if armor_hysteresis?
     return if Time.now - @last_cycle_time < @cycle_armors_time
     return if game_state.loaded
     armor_types = @cycle_armors.map { |skill, _| skill }
@@ -129,6 +166,23 @@ class SetupProcess
     @last_worn_type = next_armor_type
 
     game_state.wield_whirlwind_offhand
+  end
+
+  def check_regalia_swap(game_state)
+    return if regalia_hysteresis?(game_state)
+    return if Time.now - @last_cycle_time < @cycle_armors_time && !Flags['ct-regalia-expired']
+    # if CT is done with regalia (usually starlight depleted) don't process anymore until it starts to expire naturally, then close it down.
+    if game_state.regalia_cancel
+      regalia_shutdown(game_state) if Flags['ct-regalia-expired']
+      return
+    end
+    armor_types = @cycle_regalia
+    next_armor_type = armor_types.min_by { |skill| [DRSkill.getxp(skill), DRSkill.getrank(skill)] }
+    return unless Flags['ct-regalia-expired'] || next_armor_type != @last_worn_type
+    return unless Flags['ct-regalia-expired'] || game_state.last_regalia_type.nil? || DRSkill.getxp(next_armor_type) < @combat_training_abilities_target
+
+    @last_cycle_time = Time.now
+    game_state.swap_regalia_type = next_armor_type # Mark for SpellProcess casting in check_regalia
   end
 
   def determine_next_to_train(game_state, weapon_training, ending_ranged)
@@ -242,6 +296,32 @@ class SetupProcess
     offhand_skill = temp_array.min_by { |skill| [DRSkill.getxp(skill), DRSkill.getrank(skill)] }
     game_state.update_whirlwind_weapon_info(offhand_skill)
     game_state.wield_whirlwind_offhand
+  end
+
+  def validate_regalia(settings)
+    return unless @cycle_regalia
+    if @cycle_armors
+      echo 'ERROR - Regalia cycling and armorswap cycling at the same time not currently supported!  Removing Regalia from combat-training!'
+      @cycle_regalia = nil
+    end
+
+    if settings.gear_sets['regalia'].empty? || settings.gear_sets['regalia'].nil?
+      echo "ERROR - Regalia cycling requires a gear_set named 'regalia' that will be worn immediately before casting. Removing Regalia from combat-training!"
+      @cycle_regalia = nil
+    end
+    # reset swap clock if you start CT already wearing a regalia.
+    @last_cycle_time = Time.now unless DRCA.parse_regalia.empty?
+  end
+
+  def regalia_shutdown(game_state)
+    DRCA.shatter_regalia?
+    game_state.last_regalia_type = nil
+    game_state.swap_regalia_type = nil
+    game_state.regalia_cancel = nil
+    @cycle_regalia = nil
+    Flags.reset('ct-regalia-expired')
+    @equipment_manager.wear_equipment_set?('standard')
+    @equipment_manager.wield_weapon(game_state.weapon_name, game_state.weapon_skill) if @gearsets['standard'].include?(game_state.weapon_name) # The above will put away worn weapons
   end
 end
 
@@ -910,6 +990,12 @@ class SpellProcess
     @buff_force_cambrinth = settings.combat_trainer_buffs_force_cambrinth
     echo("  @buff_force_cambrinth: #{@buff_force_cambrinth}") if $debug_mode_ct
 
+    @regalia_array = settings.cycle_armors_regalia
+    echo("  @regalia_array: #{@regalia_array}") if $debug_mode_ct
+
+    @regalia_spell = settings.waggle_sets['regalia']['Regalia']
+    echo("  @regalia_spell: #{@regalia_spell}") if $debug_mode_ct
+
     @perc_health_timer = Time.now
 
     @symbiosis_learning_threshold = settings.symbiosis_learning_threshold
@@ -917,8 +1003,12 @@ class SpellProcess
 
     Flags.add('ct-spelllost', 'Your pattern dissipates with the loss of your target')
     Flags.add('ct-need-bless', ' passes through the .* with no effect')
+    Flags.add('ct-starlight-depleted', 'enough starlight') if DRStats.trader?
+    Flags.add('ct-regalia-expired', 'Your .* glimmers? weakly') if DRStats.trader?
+    Flags.add('ct-regalia-succeeded', 'You cup your palms skyward to bask in') if DRStats.trader?
 
     @offensive_spells
+      .select { |spell| spell['expire'] }
       .select { |spell| spell['expire'] }
       .each { |spell| add_spell_flag(spell['abbrev'], spell['expire']) }
     @buff_spells
@@ -936,6 +1026,11 @@ class SpellProcess
     @tk_spell = @offensive_spells.find { |spell| spell['abbrev'] =~ /tkt|tks/i }
     drop_tkt_ammo
     Flags.add('need-tkt-ammo', 'There is nothing here that can be thrown')
+
+    return unless DRStats.trader? && @regalia_array
+    @regalia_spell = get_data('spells').spell_data['Regalia'] if @regalia_array && @regalia_spell.nil? # get data from the regalia waggle or base-spells
+    bput('release spell', 'You let your concentration lapse', "You aren't preparing a spell") unless checkprep == 'None' # prepare to check for bespoke regalia
+    @know_bespoke = DRC.bput('pre bspk', 'Bespoke Regalia', 'You have no idea', 'fully prepared', 'already preparing') == 'Bespoke Regalia' # check for bespoke regalia
   end
 
   def drop_tkt_ammo
@@ -971,6 +1066,7 @@ class SpellProcess
       drop_tkt_ammo
     end
     check_slivers(game_state)
+    check_regalia(game_state)
     check_consume(game_state)
     check_cfb(game_state)
     check_bless(game_state)
@@ -994,6 +1090,7 @@ class SpellProcess
         pause
         fput("stow #{@tk_ammo}")
       end
+      DRCA.shatter_regalia? if @regalia_array
       return true
     end
     false
@@ -1037,6 +1134,29 @@ class SpellProcess
       bput('release mana', 'You release all', "You aren't harnessing any mana")
     end
     game_state.casting = false
+  end
+
+  def check_regalia(game_state) # designed to catch a signal from SetupProcess and prep regalia
+    return unless @regalia_array
+    return unless game_state.swap_regalia_type
+    return if game_state.swap_regalia_type == game_state.last_regalia_type && !Flags['ct-regalia-expired'] # Don't swap to same armortype unless expiring
+    return if game_state.casting
+    return if game_state.loaded
+    return if mana < @buff_spell_mana_threshold
+
+    case game_state.swap_regalia_type
+    when 'Light Armor'
+      armor_word = 'light'
+    when 'Chain Armor'
+      armor_word = 'chain'
+    when 'Brigandine'
+      armor_word = 'brigandine'
+    when 'Plate Armor'
+      armor_word = 'plate'
+    end
+
+    @regalia_spell['cast'] = @know_bespoke ? "cast #{armor_word} all" : 'cast'
+    prepare_spell(@regalia_spell, game_state)
   end
 
   def check_bless(game_state)
@@ -1113,10 +1233,21 @@ class SpellProcess
       end
     end
 
-    hide?(@hide_type) if XMLData.prepared_spell == 'Vivisection' && game_state.use_stealth_attack?
+    hide?(@hide_type) if game_state.hide_on_cast && game_state.use_stealth?
 
     if game_state.casting_sorcery
       @equipment_manager.stow_weapon(game_state.weapon_name)
+    end
+
+    if game_state.casting_regalia
+      result = DRCA.parse_regalia
+      if result.empty? # if not wearing a regalia, retreat, swap to regalia gearset, then cast
+        DRC.retreat
+        @equipment_manager.wear_equipment_set?('regalia')
+        @equipment_manager.wield_weapon(game_state.weapon_name, game_state.weapon_skill) if @settings.gear_sets['regalia'].include?(game_state.weapon_name)
+      else # otherwise break what you're already wearing then cast.
+        DRCA.shatter_regalia?(result)
+      end
     end
 
     snapshot = DRSkill.getxp(@skill)
@@ -1135,7 +1266,7 @@ class SpellProcess
     @skill = nil
     @abbrev = nil
     @use_auto_mana = nil
-
+    game_state.hide_on_cast = false
     game_state.casting = false
     game_state.cast_timer = nil
 
@@ -1155,6 +1286,8 @@ class SpellProcess
 
       game_state.casting_moonblade = false
     end
+
+    check_trader_magic(game_state)
 
     Flags.reset("ct-#{@reset_expire}") if @reset_expire
 
@@ -1199,6 +1332,8 @@ class SpellProcess
     elsif @training_cyclic_timer < @training_cast_timer
       @training_cyclic_timer = @training_cast_timer
     end
+
+    game_state.hide_on_cast = true if data['use_stealth']
 
     if needs_training == 'Sorcery'
       echo 'Preparing a sorcery spell, held items will be stowed to prevent item loss' if $debug_mode_ct
@@ -1269,6 +1404,33 @@ class SpellProcess
     end
   end
 
+  def check_trader_magic(game_state) # handles starlight-related effects and cleans flags
+    return unless DRStats.trader?
+    if Flags['ct-starlight-depleted']
+      echo '----OUT OF STARLIGHT - DELETING STARLIGHT MAGIC----'
+      @buff_spells.reject! { |spell| @buff_spells[spell]['starlight_threshold'] > -1 } # delete all buffs and offensive spells. Potential to add stellar collector support later
+      @offensive_spells.reject! { |spell| spell['starlight_threshold'] > -1 }
+      game_state.regalia_cancel = true # stop all regalia swap functions and clean it up next time it expires.
+    end
+    if game_state.casting_regalia
+      if Flags['ct-starlight-depleted'] # In some conditions, regalia can run out of starlight partway through creation.  Don't want a partial regalia on.
+        DRCA.shatter_regalia?
+        @equipment_manager.wear_equipment_set?('standard')
+        @equipment_manager.wield_weapon(game_state.weapon_name, game_state.weapon_skill) if @settings.gear_sets['standard'].include?(game_state.weapon_name)
+        game_state.last_regalia_type = nil
+        game_state.swap_regalia_type = nil
+      end
+      if Flags['ct-regalia-succeeded']
+        Flags.reset('ct-regalia-expired')
+        Flags.reset('ct-regalia-succeeded')
+        game_state.last_regalia_type = game_state.swap_regalia_type
+        game_state.swap_regalia_type = nil
+      end
+      game_state.casting_regalia = false
+    end
+    Flags.reset('ct-starlight-depleted')
+  end
+
   def check_cfb(game_state)
     return unless DRStats.necromancer?
     return unless @necromancer_zombie['Call from Beyond']
@@ -1325,6 +1487,9 @@ class SpellProcess
              @offensive_spell_cycle.rotate!
              ready_spells.find { |spell| spell['name'] == name }
            end
+
+    game_state.hide_on_cast = true if data['use_stealth']
+
     prepare_spell(data, game_state)
     Flags.reset('ct-spelllost')
   end
@@ -1404,6 +1569,9 @@ class SpellProcess
         data['cast'] = "cast #{moon}"
       end
     end
+
+    game_state.casting_regalia = data['abbrev'].casecmp('REGAL').zero?
+
     prepare?(data['abbrev'], data['mana'], data['symbiosis'], command)
     game_state.casting = true
     game_state.cambrinth_charges(data['cambrinth'])
@@ -1696,6 +1864,7 @@ end
 class TrainerProcess
   include DRC
   include DRCT
+  include DRCI
 
   def initialize(settings, equipment_manager)
     @equipment_manager = equipment_manager
@@ -1703,10 +1872,10 @@ class TrainerProcess
     @training_abilities = settings.training_abilities
     echo("  @training_abilities: #{@training_abilities}") if $debug_mode_ct
 
-    @skill_map = { 'Hunt' => 'Perception', 'Pray' => 'Theurgy', 'PercMana' => 'Attunement',
-                   'Perc' => 'Attunement', 'Astro' => 'Astrology', 'App' => 'Appraisal', 'PrayerMat' => 'Theurgy',
+    @skill_map = { 'Hunt' => 'Perception', 'Pray' => 'Theurgy', 'PercMana' => 'Attunement', 'Almanac' => 'Anything',
+                   'Perc' => 'Attunement', 'Astro' => 'Astrology', 'App' => 'Appraisal', 'PrayerMat' => 'Theurgy', 'Flee' => 'Athletics',
                    'App Quick' => 'Appraisal', 'App Careful' => 'Appraisal', 'Tactics' => 'Tactics', 'Analyze' => 'Tactics',
-                   'Scream' => 'Bardic Lore', 'Perc Health' => 'Empathy', 'Khri Prowess' => 'Debilitation',
+                   'Scream' => 'Bardic Lore', 'Perc Health' => 'Empathy', 'Khri Prowess' => 'Debilitation', 'Teach' => 'Scholarship',
                    'Stealth' => 'Stealth', 'Ambush Stun' => settings.stun_skill, 'Ambush Choke' => 'Debilitation',
                    'Favor Orb' => 'Anything', 'Charged Maneuver' => 'Expertise', 'Meraud' => 'Theurgy', 'Recall' => 'Scholarship',
                    'Barb Research Warding' => 'Warding', 'Barb Research Augmentation' => 'Augmentation',
@@ -1762,8 +1931,29 @@ class TrainerProcess
     @analyze_retry_count = settings.combat_analyze_retry_count
     echo("  @analyze_retry_count: #{@analyze_retry_count}") if $debug_mode_ct
 
+    @combat_teaching_skill = settings.combat_teaching_skill
+    echo("  @combat_teaching_skill: #{@combat_teaching_skill}") if $debug_mode_ct
+
     @combat_training_abilities_target = settings.combat_training_abilities_target
     echo("  @combat_training_abilities_target: #{@combat_training_abilities_target}") if $debug_mode_ct
+
+    @pet_count = @skill_map.include?('Locks') ? get_boxes(@pet_box_source).count : 0
+    echo("  @pet_count: #{@pet_count}") if $debug_mode_ct
+
+    @have_divination_bones = settings.have_divination_bones
+    echo("  @have_divination_bones: #{@have_divination_bones}") if $debug_mode_ct
+
+    @divination_bones_container = settings.divination_bones_storage['container']
+    echo("  @divination_bones_container: #{@divination_bones_container}") if $debug_mode_ct
+
+    @divination_bones_tied = settings.divination_bones_storage['tied']
+    echo("  @divination_bones_tied: #{@divination_bones_tied}") if $debug_mode_ct
+
+    @have_telescope = settings.have_telescope
+    echo("  @have_telescope: #{@have_telescope}") if $debug_mode_ct
+
+    @astrology_prediction_skills_survival = settings.astrology_prediction_skills['survival']
+    echo("  @astrology_prediction_skills_survival: #{@have_telescope}") if $debug_mode_ct
   end
 
   def execute(game_state)
@@ -1778,6 +1968,8 @@ class TrainerProcess
       bput('perc heal', 'You close your eyes')
     when 'Astro'
       astrology(game_state)
+    when 'Flee'
+      waitfor('Obvious') unless bput('flee bluff', 'You begin', 'see anything engaged with you', 'You suddenly realize') == 'see anything engaged with you'
     when 'App'
       appraise(game_state, '')
     when 'App Quick'
@@ -1792,6 +1984,10 @@ class TrainerProcess
       pickbox(game_state)
     when 'Hunt'
       bput('hunt', 'You take note of ', 'You find yourself unable to hunt in this area') unless game_state.retreating?
+    when 'Teach'
+      UserVars.friends.select { |c| DRRoom.pcs.include?(c) }.each do |character|
+        bput("teach #{@combat_teaching_skill} to #{character}", 'You begin to', 'is already listening to you', 'is listening to someone else', 'I could not find who you were referring to', 'You have already offered', 'That person is too busy teaching', 'You are already teaching', 'You cannot teach two different classes at the same time', 'is not paying attention to you', 'You cannot listen to a teacher and teach', 'already trying to teach you something', 'trying to teach someone else')
+      end
     when 'Pray'
       bput('pray meraud', 'You glance')
     when 'Scream'
@@ -1844,6 +2040,9 @@ class TrainerProcess
       waitrt?
       game_state.wield_whirlwind_offhand
       kick_pile?
+    when 'Almanac'
+      UserVars.almanac_last_use ||= Time.now - 600
+      use_almanac(game_state)
     when 'Smite'
       smite(game_state)
     end
@@ -1852,6 +2051,21 @@ class TrainerProcess
   end
 
   private
+
+  def use_almanac(game_state)
+    return unless Time.now - UserVars.almanac_last_use >= 600
+    return if left_hand && !game_state.currently_whirlwinding
+
+    game_state.sheath_whirlwind_offhand if game_state.currently_whirlwinding
+    retreat
+    fput('engage') unless game_state.npcs.empty? || game_state.retreating?
+    bput('get my almanac', 'You get', 'What were')
+    bput('study my almanac', 'You set about', 'gleaned all the insight you can', 'Study what')
+    waitrt?
+    bput('stow my almanac', 'You put', 'Stow what')
+    UserVars.almanac_last_use = Time.now
+    game_state.wield_whirlwind_offhand if game_state.currently_whirlwinding
+  end
 
   def smite(game_state)
     return if game_state.npcs.empty?
@@ -2000,32 +2214,58 @@ class TrainerProcess
   end
 
   def pickbox(game_state)
-    return if game_state.loaded
-    return if left_hand
-    return unless @pet_box_source
-    boxes = get_boxes(@pet_box_source)
-    return if boxes.empty?
-    box = boxes.first
-    # Check what's in the right hand so we can get it back
-    rhitem = @equipment_manager.item_by_desc(right_hand) if right_hand
-    @equipment_manager.stow_weapon("#{rhitem.adjective} #{rhitem.name}") if rhitem
-    return if right_hand # Couldn't empty right hand for some reason (typically a summoned weapon).  No picking allowed
+    return unless @pet_box_source && @pet_count > 0
+    return if game_state.loaded || game_state.offhand?
+    return if left_hand && !game_state.currently_whirlwinding
+
+    box = get_boxes(@pet_box_source).first
+    return unless box
+
+    if right_hand
+      if game_state.weapon_is_summoned?
+        echo 'combat-trainer::pickbox: weapon summoned' if $debug_mode_ct
+        if DRStats.warrior_mage?
+          bput("lower #{game_state.weapon_name} to ground", 'You lower')
+        else
+          bput("wear my #{game_state.weapon_name}", 'telekinetic force')
+        end
+      else
+        echo 'combat-trainer::pickbox: weapon NOT summoned' if $debug_mode_ct
+        @equipment_manager.stow_weapon(game_state.weapon_name)
+      end
+      had_weapon = true
+    end
+    game_state.sheath_whirlwind_offhand if game_state.currently_whirlwinding
+
     bput("get #{box} from my #{@pet_box_source}", 'You get', 'What were')
     retreat
-    response =  bput("pick my #{box} blind", 'not even locked', 'Roundtime', 'Find a more appropriate tool', 'You realize that would be next to impossible')
-    if response == 'not even locked'
-      # Dump the box so that combat-trainer lootprocess can take over
+    case bput("pick my #{box} blind", 'not even locked', 'Roundtime', 'Find a more appropriate tool', 'You realize that would be next to impossible')
+    when 'not even locked'
+      # Dump the box so that combat-trainer's lootprocess can take over
       bput("open my #{box}", 'You open', 'That is already open')
       2.times do
-        bput("dismantle my #{box}", 'You can not dismantle', 'You dump the contents', 'You move your hands', 'You must be holding the object', 'Unable to locate')
+        case bput("dismantle my #{box}", 'You can not dismantle', 'You dump the contents', 'You move your hands', 'You must be holding the object', 'Unable to locate', 'You realize that would be next to impossible while in combat')
+        when 'You realize that would be next to impossible while in combat'
+          retreat
+          bput("dismantle my #{box}", 'You can not dismantle', 'You dump the contents', 'You move your hands', 'You must be holding the object', 'Unable to locate')
+        end
       end
       waitrt?
+      @pet_count -= 1
     else
       waitrt?
       bput("put my #{box} in my  #{@pet_box_source}", 'You put')
     end
 
-    @equipment_manager.get_item?(rhitem) if rhitem
+    if had_weapon
+      if game_state.weapon_is_summoned?
+        bput("get my #{game_state.weapon_name}", 'You pick up', 'from the air')
+      else
+        @equipment_manager.wield_weapon(game_state.weapon_name, game_state.weapon_skill)
+      end
+      game_state.wield_whirlwind_offhand if game_state.currently_whirlwinding
+    end
+
     fput('engage') if !DRRoom.npcs.empty? && !game_state.retreating?
   end
 
@@ -2075,9 +2315,153 @@ class TrainerProcess
     return if game_state.retreating?
 
     retreat
-    bput('predict weather', 'You predict that', 'You are far too', 'you lack the skill to grasp them fully')
+    if DRSkill.getrank('Astrology') <= 120
+      bput('predict weather', 'You predict that', 'You are far too', 'you lack the skill to grasp them fully')
+      waitrt?
+      fput('engage')
+    else
+      retreat
+      check_heavens(game_state)
+      Flags.reset('bad-search')
+    end
+  end
+
+  def check_heavens(game_state)
+    @equipment_manager.stow_weapon(game_state.weapon_name)
+    case DRC.bput('get my telescope', 'You get a', 'You need a free hand to pick that up.', 'You are already holding that.')
+    when 'You get a'
+      determine_time
+    when 'You need a free hand to pick that up.'
+      return
+    when 'You are already holding that.'
+      determine_time
+    end
+    @equipment_manager.wield_weapon(game_state.weapon_name, game_state.weapon_skill)
+  end
+
+  def determine_time
+    echo 'Determining time'
+    case DRC.bput('time', 'it is dawn', 'morning', 'midday', 'noon', 'afternoon', 'dusk', 'sunset', 'evening', 'midnight', 'night', 'almost dawn', 'approaching sunrise')
+    when 'it is dawn', 'morning', 'midday', 'noon', 'afternoon', 'dusk'
+      day_center
+    when 'sunset', 'evening', 'midnight', 'night', 'almost dawn', 'approaching sunrise'
+      night_center
+    end
+  end
+
+  def day_center
+    fput('center telescope on sun')
+    while line = get
+      if line.include?("That's a bit tough to do when you can't see the sky")
+        stow_telescope
+        pause 1
+        return
+      end
+      if line.include?('Your search for the sun')
+        night_center
+      end
+      if line.include?('You are a bit too busy performing to do that.')
+        echo 'Playing an instrument, retrying'
+        fput('stop play')
+        day_center
+      end
+      observe
+      break
+    end
+  end
+
+  def night_center
+    fput('center telescope on heart')
+    while line = get
+      if line.include?("That's a bit tough to do when you can't see the sky")
+        stow_telescope
+        pause 1
+        return
+      end
+      if line.include?('Your search for the constellation of the Heart')
+        day_center
+      end
+      if line.include?('You are a bit too busy performing to do that.')
+        fput('stop play')
+        night_center
+      end
+      observe
+      break
+    end
+  end
+
+  def observe
+    echo 'Observing'
+    case DRC.bput('peer telescope', 'The pain is too much', 'You learned something useful from your observation', "While the sighting wasn't quite", 'Clouds obscure the sky', 'You peer aimlessly through your telescope', 'You have not pondered your last observation sufficiently', 'You see nothing regarding the future', "You believe you've learned all that you can about survival", 'Too many futures cloud your mind - you learn nothing.')
+    when 'You learned something useful from your observation'
+      waitrt?
+      stow_telescope
+      return
+    when 'The pain is too much'
+      stow_telescope
+      return
+    when "While the sighting wasn't quite"
+      waitrt?
+      stow_telescope
+      return
+    when 'Clouds obscure the sky'
+      stow telescope
+      return
+    when 'You peer aimlessly through your telescope'
+      determine_time
+    when 'You have not pondered your last observation sufficiently'
+      waitrt?
+      stow_telescope
+      return
+    when 'You see nothing regarding the future'
+      waitrt?
+      pause 1
+      observe
+    when "You believe you've learned all that you can about survival"
+      waitrt?
+      stow_telescope
+      check_predict
+    when 'Too many futures cloud your mind - you learn nothing.'
+      waitrt?
+      stow_telescope
+      check_predict
+    end
+  end
+
+  def stow_telescope
+    case DRC.bput('stow my telescope', 'Stow what', 'You put your telescope')
+    when 'You put your telescope'
+      pause 1
+      return
+    when 'Stow what'
+      return
+    end
+  end
+
+  def check_predict
     waitrt?
-    fput('engage')
+    pause 1
+    if DRSkill.getxp('Astrology') > 25
+      return
+    else
+      fput("align #{@astrology_prediction_skills_survival}")
+      waitrt?
+      pause 1
+      execute_predict
+    end
+  end
+
+  def execute_predict
+    retreat
+    case DRC.bput('predict future', 'You are far too occupied by present matters to immerse yourself in matters of the future', 'You look inside yourself')
+    when 'You are far too occupied by present matters to immerse yourself in matters of the future'
+      retreat
+      waitrt?
+      execute_predict
+    when 'You look inside yourself'
+      stow_hands
+      return
+    end
   end
 
   def reset_ability(game_state, ability_name, offset = 0)
@@ -2219,11 +2603,18 @@ class AttackProcess
         end
       end
 
-      bput(command, 'Wouldn\'t it be better if you used a melee weapon?', 'Face What?', 'Roundtime', "You aren't close enough to attack", 'It would help if you were closer', 'There is nothing else to face!')
+      bput(command, 'Wouldn\'t it be better if you used a melee weapon?', 'Face What?', 'Roundtime', "You aren't close enough to attack", 'It would help if you were closer', 'There is nothing else to face!', 'You must be hidden', 'flying too high for you to attack')
     end
 
     pause
     waitrt?
+
+    if reget(5, 'flying too high for you to attack')
+      case bput('face next', 'There is nothing', 'You turn to face')
+      when 'There is nothing'
+        pause 5
+      end
+    end
 
     if reget(5, 'You can\'t backstab that')
       if game_state.npcs.uniq.length == 1
@@ -2270,11 +2661,15 @@ class AttackProcess
   end
 
   def shoot_aimed(command, game_state)
-    case bput(command, 'isn\'t loaded', 'There is nothing', 'But your', 'you (fire|poach)', 'I could not find', 'with no effect and falls to the ground', 'Face what', 'How can you (poach|snipe)', 'your moving to fire went unobserved', 'notices your attempt to remain hidden', 'you don\'t feel like fighting right now', 'That weapon must be in your right hand to fire')
+    case bput(command, 'isn\'t loaded', 'There is nothing', 'But your', /you (fire|poach|snipe) an? (?:.*\s)?(arrow|bolt|shard|rock|sphere|clump|coral|fist|holder|lump|patella|pellet|pulzone|quadrello|quill|stone|stopper|verretto) at/i, 'I could not find', 'with no effect and falls to the ground', 'Face what', 'How can you (poach|snipe)', 'your moving to fire went unobserved', 'notices your attempt to remain hidden', 'you don\'t feel like fighting right now', 'That weapon must be in your right hand to fire')
     when /How can you (poach|snipe)/, 'notices your attempt to remain hidden'
       shoot_aimed('shoot', game_state)
-    when /you (fire|poach)/, 'your moving to fire went unobserved'
+    when 'your moving to fire went unobserved'
       game_state.action_taken
+    when /you (fire|poach|snipe) an? (?:.*\s)?(arrow|bolt|shard|rock|sphere|clump|coral|fist|holder|lump|patella|pellet|pulzone|quadrello|quill|stone|stopper|verretto) at/i
+      game_state.action_taken
+      ammo = Regexp.last_match(2)
+      bput("stow my #{ammo}", 'You pick up', 'Stow what')
     when 'you don\'t feel like fighting right now', 'That weapon must be in your right hand to fire'
       pause 1
       shoot_aimed(command, game_state)
@@ -2307,6 +2702,8 @@ class AttackProcess
       waitrt?
     elsif game_state.loaded && !game_state.aiming_trainables.empty?
       skill = game_state.determine_aiming_skill
+      echo "attack_aimed::aiming_trainables:skill: #{skill}" if $debug_mode_ct
+      return unless skill
       weapon_name = game_state.wield_offhand_weapon(skill)
 
       actions = if skill.include?('Thrown')
@@ -2323,7 +2720,11 @@ class AttackProcess
 
       actions.each do |action|
         break unless execute_aiming_action?(action, game_state)
-        bput("get my #{weapon_name}", 'You pick up') if action.include?('lob')
+        next unless action.include?('lob')
+        case bput("get my #{weapon_name}", 'You pick up', 'What were')
+        when 'What were'
+          bput("get #{weapon_name}", 'You pick up')
+        end
       end
 
       game_state.sheath_offhand_weapon(skill)
@@ -2341,8 +2742,8 @@ class AttackProcess
       end
     else
       if game_state.dual_load?
-        pause 0.5 until load_return = bput('load arrows', 'You reach into', 'already loaded', 'Such a feat would be impossible without the winds to guide', 'but are unable to draw upon its majesty')
-        if load_return == 'but are unable to draw upon its majesty'
+        pause 0.5 until load_return = bput('load arrows', 'You reach into', 'already loaded', 'Such a feat would be impossible without the winds to guide', 'but are unable to draw upon its majesty', 'without steadier hands')
+        if ['but are unable to draw upon its majesty', 'without steadier hands', 'Such a feat would be impossible without the winds to guide'].include?(load_return)
           pause 0.5 until bput('load', 'You reach into', 'You carefully load', 'already loaded')
         end
       else
@@ -2372,7 +2773,9 @@ class AttackProcess
   end
 
   def aim(game_state)
-    case bput('aim', 'You begin to target', 'You are already', 'There is nothing else', 'Face what\?', 'You shift your target', 'Your repeating crossbow', 'Your assassin\'s crossbow', 'Your repeating arbalest', 'Strangely, you don\'t feel like fighting right now', 'Your riot crossbow')
+    case bput('aim', 'You begin to target', 'You are already', 'There is nothing else', 'Face what\?', 'You shift your target', 'Your repeating crossbow', 'Your assassin\'s crossbow', 'Your repeating arbalest', 'Strangely, you don\'t feel like fighting right now', 'Your riot crossbow', 'In one frozen moment')
+    when 'You are already'
+      game_state.loaded = true
     when 'Your repeating crossbow', 'Your assassin\'s crossbow', 'Your riot crossbow'
       case bput('push my cross', 'A rapid series of clicks', 'You attempt to ready your repeating crossbow', 'You attempt to ready your assassin\'s crossbow', 'You attempt to ready your riot crossbow')
       when 'A rapid series of clicks'
@@ -2473,7 +2876,7 @@ class CombatTrainer
     @equipment_manager = EquipmentManager.new(settings)
     setup(settings)
     settings.storage_containers.each { |container| fput("open my #{container}") }
-    @equipment_manager.wear_equipment_set?('standard')
+    @equipment_manager.wear_equipment_set?('standard') if settings.cycle_armors_regalia.nil? || DRCA.parse_regalia.empty?
   end
 
   def set_dance(message, settings)
@@ -2562,7 +2965,7 @@ class GameState
   $ranged_skills = $thrown_skills + $aim_skills
   $non_dance_skills = $ranged_skills + ['Brawling', 'Offhand Weapon']
 
-  attr_accessor :mob_died, :last_weapon_skill, :danger, :parrying, :casting, :need_bundle, :cooldown_timers, :no_stab_current_mob, :loaded, :selected_maneuver, :cast_timer, :casting_moonblade, :casting_weapon_buff, :use_charged_maneuvers, :casting_consume, :prepare_consume, :casting_cfb, :prepare_cfb, :wounds, :blessed_room, :currently_whirlwinding, :whirlwind_trainables, :reset_stance, :charges_total, :casting_sorcery
+  attr_accessor :mob_died, :last_weapon_skill, :danger, :parrying, :casting, :need_bundle, :cooldown_timers, :no_stab_current_mob, :loaded, :selected_maneuver, :cast_timer, :casting_moonblade, :casting_weapon_buff, :use_charged_maneuvers, :casting_consume, :prepare_consume, :casting_cfb, :prepare_cfb, :wounds, :blessed_room, :currently_whirlwinding, :whirlwind_trainables, :reset_stance, :charges_total, :casting_sorcery, :hide_on_cast, :regalia_cancel, :last_regalia_type, :swap_regalia_type, :casting_regalia
 
   def initialize(settings, equipment_manager)
     @equipment_manager = equipment_manager
@@ -2581,6 +2984,11 @@ class GameState
     @cast_timer = nil
     @casting_moonblade = false
     @casting_sorcery = false
+    @hide_on_cast = false
+    @casting_regalia = false
+    @regalia_cancel = false
+    @last_regalia_type = nil
+    @swap_regalia_type = nil
     @casting_weapon_buff = false
     @casting_consume = false
     @prepare_consume = false
@@ -2859,7 +3267,7 @@ class GameState
   def determine_whirlwind_action
     if @use_weak_attacks && Flags['ct-accuracy-ready']
       update_analyze_array(true) if @analyze_combo_array.empty?
-      @analyze_combo_array.shift
+      @analyze_combo_array.empty? ? 'attack' : @analyze_combo_array.shift
     elsif (npcs.length > 2) && !balance_low?
       'whirlwind'
     else
@@ -2899,6 +3307,10 @@ class GameState
 
   def summoned_info(weapon_skill)
     @summoned_weapons.find { |summoned_skill| summoned_skill['name'] == weapon_skill }
+  end
+
+  def weapon_is_summoned?
+    !summoned_info(weapon_skill).nil?
   end
 
   def update_target_weapon_skill
@@ -3109,7 +3521,7 @@ class GameState
   def dual_load?
     @dual_load && weapon_skill == 'Bow' &&
       DRSkill.getrank('Bow') >= 201 && DRStats.agility >= 30 && DRStats.reflex >= 30 &&
-      (DRSpells.active_spells['See the Wind'] || DRStats.barbarian?)
+      (DRSpells.active_spells['See the Wind'] || DRStats.barbarian? || DRSpells.active_spells['Khri Steady'])
   end
 
   def prepare_summoned_weapon(weapon_already_summoned)
@@ -3155,7 +3567,7 @@ class GameState
       brawling? ? 'gouge' : 'jab'
     elsif @use_barb_combos && !offhand? && !brawling?
       update_analyze_array(false) if @analyze_combo_array.empty?
-      @analyze_combo_array.shift
+      @analyze_combo_array.empty? ? 'attack' : @analyze_combo_array.shift
     else
       'attack'
     end
@@ -3191,7 +3603,12 @@ class GameState
     held_types = ['Small Edged', 'Large Edged', 'Small Blunt', 'Large Blunt', 'Staves', 'Polearms']
     options = @aiming_trainables
     options -= held_types if weapon_skill.eql?('Bow') || (weapon_skill.eql?('Crossbow') && !@using_light_crossbow)
+    echo "determine_aiming_skill::options: #{options}" if $debug_mode_ct
     options.min_by { |skill| [DRSkill.getxp(skill), DRSkill.getrank(skill)] }
+  end
+
+  def use_stealth?
+    DRSkill.getxp('Stealth') < @combat_training_abilities_target
   end
 
   attr_reader :aiming_trainables
@@ -3220,7 +3637,10 @@ class GameState
       Flags.reset("ct-#{combo_type}-ready")
       return false
     when 'Analyze what?'
-      fput('face next')
+      case bput('face next', 'There is nothing else', 'You turn', 'What are you trying')
+      when 'You turn'
+        return perform_analyze?(combo_type, expertise_requirement)
+      end
       return true
     end
 
@@ -3245,16 +3665,32 @@ class GameState
     @aim_fillers_stealth && @aim_fillers_stealth[weapon_skill] && use_stealth?
   end
 
-  def use_stealth?
-    DRSkill.getxp('Stealth') < @combat_training_abilities_target
-  end
-
   attr_accessor :clean_up_step, :current_weapon_skill, :target_weapon_skill, :no_skins, :constructs, :no_stab_mobs, :no_loot, :dancing, :retreating, :action_count, :charges, :aim_queue, :dance_queue, :analyze_combo_array
   attr_reader :dance_skill, :target_action_count, :dance_threshold, :retreat_threshold, :summoned_weapons, :target_increment, :stances, :weapons_to_train, :use_stealth_attacks, :ambush, :backstab, :charged_maneuvers, :fatigue_regen_threshold, :aim_fillers, :aim_fillers_stealth, :dance_actions, :dance_actions_stealth, :ignored_npcs, :dual_load, :summoned_weapons_element, :summoned_weapons_ingot, :cambrinth, :stored_cambrinth, :cambrinth_cap, :use_weak_attacks, :dedicated_camb_use, :use_barb_combos, :balance_regen_threshold
 end
 
 before_dying do
   DRCA.release_cyclics
+  DRCA.shatter_regalia?
+  Flags.delete('using-corpse')
+  Flags.delete('pouch-full')
+  Flags.delete('container-full')
+  Flags.delete('ct-lodged')
+  Flags.delete('ct-engaged')
+  Flags.delete('ct-spelllost')
+  Flags.delete('need-tkt-ammo')
+  Flags.delete('ct-spellcast')
+  Flags.delete('glyph-mana-expired')
+  Flags.delete('ct-face-what')
+  Flags.delete('ct-aim-failed')
+  Flags.delete('ct-ranged-ready')
+  Flags.delete('ct-accuracy-ready')
+  Flags.delete('ct-damage-ready')
+  Flags.delete('ct-need-bless')
+  Flags.delete('last-stance')
+  Flags.delete('ct-regalia-expired')
+  Flags.delete('ct-starlight-depleted')
+  Flags.delete('ct-regalia-succeeded')
 end
 
 $COMBAT_TRAINER = CombatTrainer.new

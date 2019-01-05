@@ -497,6 +497,32 @@ TextSubs.add('^After a moment, you see a vision of your god who calls to you by 
 TextSubs.add('^After a moment, you see a crystal-clear vision of your god who speaks slowly and deliberately, "Your unwavering faith and devotion pleases me greatly, (\w+)\.\s+Go forth and continue your works, and you shall only attain a greater level of purity\."', 'After a moment, you see a crystal-clear vision of your god who speaks slowly and deliberately, "Your unwavering faith and devotion pleases me greatly, \1.  Go forth, and continue your works and you shall only attain a greater level of purity." (15/16)')
 TextSubs.add("^After a moment, you feel a clear presence like a warm blanket covering you beneath the shade of a giant sana'ati tree\.", "After a moment, you feel a clear presence like a warm blanket covering you beneath the shade of a giant Sana'ati tree. (16/16)")
 
+# Osrel Meraud power / capacity messaging for Clerics (seen when you 'focus orb')
+om_str = 'The strength of the sensation evokes the image of'
+TextSubs.add("^#{om_str} a pile of cold ashes\.", "#{om_str} a pile of cold ashes. (1/10)")
+TextSubs.add("^#{om_str} a pile of smoldering ashes\.", "#{om_str} a pile of smoldering ashes. (2/10)")
+TextSubs.add("^#{om_str} a nearly burnt-out candle wick\.", "#{om_str} a nearly burnt-out candle wick. (3/10)")
+TextSubs.add("^#{om_str} a half-melted burning candle\.", "#{om_str} a half-melted burning candle. (4/10)")
+TextSubs.add("^#{om_str} a tall burning candle\.", "#{om_str} a tall burning candle. (5/10)")
+TextSubs.add("^#{om_str} a blazing torch\.", "#{om_str} a blazing torch. (6/10)")
+TextSubs.add("^#{om_str} a small campfire\.", "#{om_str} a small campfire. (7/10)")
+TextSubs.add("^#{om_str} a roaring bonfire\.", "#{om_str} a roaring bonfire. (8/10)")
+TextSubs.add("^#{om_str} flaming magma pouring through a volcanic crevasse\.", "#{om_str} flaming magma pouring through a volcanic crevasse. (9/10)")
+TextSubs.add("^#{om_str} torrents of fiery rain falling upon Elanthia from the World Dragon's maw\.", "#{om_str} torrents of fiery rain falling upon Elanthia from the World Dragon's maw. (10/10)")
+
+om_cap = 'The pervasiveness of the sensation evokes the image of'
+TextSubs.add("^#{om_cap} a stream in your mind's eye\.", "#{om_cap} a stream in your mind's eye. (1/11)")
+TextSubs.add("^#{om_cap} a pond in your mind's eye\.", "#{om_cap} a pond in your mind's eye. (2/11)")
+TextSubs.add("^#{om_cap} a river in your mind's eye\.", "#{om_cap} a river in your mind's eye. (3/11)")
+TextSubs.add("^#{om_cap} a lake in your mind's eye\.", "#{om_cap} a lake in your mind's eye. (4/11)")
+TextSubs.add("^#{om_cap} a sea in your mind's eye\.", "#{om_cap} a sea in your mind's eye. (5/11)")
+TextSubs.add("^#{om_cap} an ocean in your mind's eye\.", "#{om_cap} an ocean in your mind's eye. (6/11)")
+TextSubs.add("^#{om_cap} Drogor's deeps in your mind's eye\.", "#{om_cap} Drogor's deeps in your mind's eye. (7/11)")
+TextSubs.add("^#{om_cap} Elanthia's tides rising toward Katamba in your mind's eye\.", "#{om_cap} Elanthia's tides rising toward Katamba in your mind's eye. (8/11)")
+TextSubs.add("^#{om_cap} the sapphirine planet Merewalda in your mind's eye\.", "#{om_cap} the sapphirine planet Merewalda in your mind's eye. (9/11)")
+TextSubs.add("^#{om_cap} Alamhif's Bridge arching from the cold seas of Death in your mind's eye\.", "#{om_cap} Alamhif's Bridge arching from the cold seas of Death in your mind's eye. (10/11)")
+TextSubs.add("^#{om_cap} the fathomless ebon abysms of the Starry Road in your mind's eye\.", "#{om_cap} the fathomless ebon abysms of the Starry Road in your mind's eye. (11/11)")
+
 # Ranger pace messaging substitutions, these show the wilderness level of the room so you can determine how much the room will raise or decrease your bonus.
 # Neutral messaging is purposefully not reported here because non-rangers would see it.
 TextSubs.add('You glance about the area while pacing back and forth, like a large, stalking mountain cat\.', 'You glance about the area while pacing back and forth, like a large, stalking mountain cat. (extremely wilderness)')
@@ -546,12 +572,13 @@ TextSubs.add('be extremely ineffective at increasing crafting speed', 'be extrem
 TextSubs.add('be tremendously ineffective at increasing crafting speed', 'be tremendously ineffective (2/11) at increasing crafting speed')
 TextSubs.add('be completely ineffective at increasing crafting speed', 'be completely ineffective (1/11) at increasing crafting speed')
 
-TextSubs.add('enormous quantity remains to be found', 'enormous quantity (5/5) remains to be found')
-TextSubs.add('substantial quantity remains to be found', 'substantial quantity (4/5) remains to be found')
-TextSubs.add('good quantity remains to be found', 'good quantity (3/5) remains to be found')
-TextSubs.add('decent quantity remains to be found', 'decent quantity (2/5) remains to be found')
-TextSubs.add('small quantity remains to be found', 'small quantity (1/5) remains to be found')
-TextSubs.add('scattering of resources remains to be found', 'scattering of resources (0/5) remains to be found')
+# Mining/Lumberjacking resources
+TextSubs.add('enormous (quantity|number) remains to be found', 'enormous \1 (5/5) remains to be found')
+TextSubs.add('substantial (quantity|number) remains to be found', 'substantial \1 (4/5) remains to be found')
+TextSubs.add('good (quantity|number) remains to be found', 'good \1 (3/5) remains to be found')
+TextSubs.add('decent (quantity|number) remains to be found', 'decent \1 (2/5) remains to be found')
+TextSubs.add('small (quantity|number) remains to be found', 'small \1 (1/5) remains to be found')
+TextSubs.add('scattering of (resources|trees) remains to be found', 'scattering of \1 (0/5) remains to be found')
 
 TextSubs.add('You sense nothing out of the ordinary\.  Only magic could detect the useless trace of (.*) still in your system\.', 'You sense nothing out of the ordinary. Only magic could detect the useless trace of \1 still in your system. (1/12)')
 TextSubs.add('A small charge lingers within your body, just above the threshold of perception\.', 'A small charge lingers within your body, just above the threshold of perception. (2/12)')
@@ -1011,6 +1038,7 @@ TextSubs.add("#{scroll_label} \"Rejuvenation.\"", '\1 "Rejuvenation." (Cleric)')
 TextSubs.add("#{scroll_label} \"Mass Rejuvenation.\"", '\1 "Mass Rejuvenation." (Cleric)')
 TextSubs.add("#{scroll_label} \"Eylhaar's Feast.\"", '\1 "Eylhaar\'s Feast." (Cleric)')
 TextSubs.add("#{scroll_label} \"Bitter Feast.\"", '\1 "Bitter Feast." (Cleric)')
+TextSubs.add("#{scroll_label} \"Heavenly Fires.\"", '\1 "Heavenly Fires." (Cleric)')
 
 TextSubs.add("#{scroll_label} \"Soldier's Prayer.\"", '\1 "Soldier\'s Prayer." (Paladin)')
 TextSubs.add("#{scroll_label} \"Courage.\"", '\1 "Courage." (Paladin)')
@@ -1146,6 +1174,7 @@ TextSubs.add("#{scroll_label} \"Rimefang.\"", '\1 "Rimefang." (Warrior Mage)')
 TextSubs.add("#{scroll_label} \"Veil of Ice.\"", '\1 "Veil of Ice." (Warrior Mage)')
 TextSubs.add("#{scroll_label} \"Fortress of Ice.\"", '\1 "Fortress of Ice." (Warrior Mage)')
 TextSubs.add("#{scroll_label} \"Flame Shockwave.\"", '\1 "Flame Shockwave." (Warrior Mage)')
+TextSubs.add("#{scroll_label} \"Aethrolysis.\"", '\1 "Aethrolysis." (Warrior Mage)')
 
 TextSubs.add("#{scroll_label} \"Breath of Storms.\"", '\1 "Breath of Storms." (Bard)')
 TextSubs.add("#{scroll_label} \"Echoes of Aether.\"", '\1 "Echoes of Aether." (Bard)')
@@ -1254,5 +1283,11 @@ TextSubs.add("#{scroll_label} \"Butcher's Eye.\"", '\1 "Butcher\'s Eye." (Necrom
 TextSubs.add("#{scroll_label} \"Philosopher's Preservation.\"", '\1 "Philosopher\'s Preservation." (Necromancer)')
 TextSubs.add("#{scroll_label} \"Kura-Silma.\"", '\1 "Kura-Silma." (Necromancer)')
 TextSubs.add("#{scroll_label} \"Ivory Mask.\"", '\1 "Ivory Mask." (Necromancer)')
+
+TextSubs.add("#{scroll_label} \"Trabe Chalice.\"", '\1 "Trabe Chalice." (Trader)')
+TextSubs.add("#{scroll_label} \"Turmar Illumination.\"", '\1 "Turmar Illumination." (Trader)')
+TextSubs.add("#{scroll_label} \"Avren Aevareae.\"", '\1 "Avren Aevareae." (Trader)')
+TextSubs.add("#{scroll_label} \"Crystal Dart.\"", '\1 "Crystal Dart." (Trader)')
+TextSubs.add("#{scroll_label} \"Nonchalance.\"", '\1 "Nonchalance." (Trader)')
 
 clear until script.gets.nil?

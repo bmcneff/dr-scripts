@@ -296,6 +296,13 @@ class TheurgyActions
     total_cost = items_to_buy.map { |i| i[:shop]['price'] }.reduce(:+)
     ensure_copper_on_hand(total_cost + 300, @settings) unless items_to_buy.empty?
 
+    unless holy_water?
+      walk_to(@data['holy_water']['id'])
+      bput("get my #{@water_holder}", 'You get', 'You are already')
+      pause 0.1 while bput("fill #{@water_holder} with water from #{@data['holy_water']['noun']}", 'You fill', 'There is no more room') == 'You fill'
+      stow_hands
+    end
+
     items_to_buy.each do |item|
       shop = item[:shop]
       if shop['method'] &&
@@ -353,7 +360,8 @@ class TheurgyActions
   def purchase_method_whitelist
     %w[buy_taffelberries
        buy_parchment
-       buy_wine_shard]
+       buy_wine_shard
+       buy_oil_hib]
   end
 
   def buy_taffelberries
@@ -376,6 +384,10 @@ class TheurgyActions
     bput('order 10', 'The publican places a flute',
          'You don\'t have enough money to afford that')
     bput('get wine on bar', 'You get a flute', 'What were you referring')
+  end
+
+  def buy_oil_hib
+    bput('buy oil in chest', 'You decide to purchase', 'You realize you don\'t have enough')
   end
 
   def perform_next_action
@@ -969,6 +981,15 @@ class Theurgy
       true
     end
   end
+end
+
+before_dying do
+  Flags.delete('theurgy-commune')
+  Flags.delete('theurgy-eluned')
+  Flags.delete('theurgy-tamsine')
+  Flags.delete('theurgy-truffenyi')
+  Flags.delete('theurgy-kertigen')
+  Flags.delete('research_done')
 end
 
 Theurgy.new

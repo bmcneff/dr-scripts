@@ -1,27 +1,40 @@
+---
+aiming_trainables:
+- Tactics
+- Brawling
+- Small Blunt
+- Light Thrown
+- Staves
+
 use_weak_attacks: false
 training_manager_hunting_priority: true
 training_manager_priority_skills:
 - Large Edged
 hunting_info:
-- :zone: plague_wraiths
+- :zone: black_goblins
   args:
   - d0
   - back
   stop_on:
   - Large Edged
   :duration: 60
+  stop_on_low:
+  - Small Edged
   before:
   - go2 12345
-  - pick pets 100
   - pick
-  - first-aid
   - athletics wyvern
+  during:
+  - bandaid
   after:
   - journal
+  - go2 12345
+  - tendme
+  - pick pets 100
 
 gear_sets:
   standard:
-  - black leathers
+  - double leathers
   - round sipar
   - plate gauntlet
   - lamellar balaclava
@@ -89,10 +102,9 @@ buff_spells:
     recast: 2
     mana: 30
     cambrinth:
+    - 20
+    - 20
     - 15
-    - 15
-    - 15
-    - 10
   Senses of the Tiger:
     abbrev: sott
     recast: 1
@@ -101,6 +113,10 @@ buff_spells:
     - 20
     - 20
     - 20
+  Syamelyo Kuniyo:
+    abberv: sk
+    recast: -1
+    mana: 60
 
 offensive_spells:
 - skill: Debilitation
@@ -109,12 +125,15 @@ offensive_spells:
   harmless: true
 - skill: Targeted Magic
   abbrev: stampede
-  mana: 12
+  mana: 5
   cast_only_to_train: true
 
 training_abilities:
   Perc: 160
-  Locks: 90
+  Locks: 81
+  Teach: 60
+#  Collect: 140
+  Flee: 160
 
 custom_loot_type:
 
