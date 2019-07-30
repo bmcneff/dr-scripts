@@ -81,6 +81,9 @@ prep_messages:
 - You spread your hands apart then slowly bring them together, fingers interlocked
 - Closing your eyes, you carefully bend some mana streams through the tattoo on your
 - You deftly waggle your fingers in the precise motions
+- You direct your attention toward the heavens and trace the lunar sigils
+- With great force, you slap your hands together before
+- You seem to have forgotten this spell
 
 cast_messages:
 - ^Your spell .*backfires
@@ -92,9 +95,11 @@ cast_messages:
 - Your target pattern dissipates
 - You make a .* gesture
 - You raise your (left|right) hand skyward
+- ^You raise your palms and face to the heavens
 - Flickering shadows tear away
 - You sense a Malediction
 - You release an accompaniment
+- ^You release a duet of elemental fire and water into your chanting
 - You roll your hands in an elliptical pattern
 - You (cup|wave|raise) your hand
 - You flicker your malevolent desires towards
@@ -160,6 +165,8 @@ cast_messages:
 - ^Wisps of spectral flame whorl.*$
 - ^You cup your palms skyward to bask in.*$
 - ^Incited by the spell, your starlight aura
+- ^Cupping your palms skyward, you bask in a cascade.*$
+- ^Your mind latches onto something moving just under the surface of the air
 
 khri_preps:
 - With deep breaths
@@ -193,6 +200,9 @@ khri_preps:
 - Slipping into the proper mindset, you feel
 - Preparing your voice, you concentrate
 - Drawing upon your inner strength
+- You attempt to relax your mind from all of its meditative states
+- After a deep breath, your meditation bears fruit
+- Briefly shutting your eyes
 
 barb_abilities:
   Python:
@@ -255,6 +265,16 @@ barb_abilities:
     start_command: form owl
     activated_message: transfix upon the surrounding shadows
     expired_message: finish practicing the Form of the Owl
+  Toad:
+    type: form
+    start_command: form toad
+    activated_message: your body slips into the resilient Form of the Toad
+    expired_message: finish practicing the Form of the Toad
+  Buffalo:
+    type: form
+    start_command: form buffalo
+    activated_message: Lurching forward, you reposition your burden and mimic
+    expired_message: finish practicing the Form of the Buffalo
   Earthquake:
     type: berserk
     start_command: bers earthquake
@@ -333,6 +353,7 @@ spell_data:
     prep_type: prepare
     cyclic: true
     mana: 7
+    mana_type: elemental
   Absolution:
     skill: Utility
     harmless: true
@@ -357,6 +378,7 @@ spell_data:
       - Your body is no longer imbued with Fire.
       - Release what?
     recast: 2
+    mana_type: elemental
   Aesandry Darlaeth:
     skill: Augmentation
     abbrev: AD
@@ -368,22 +390,26 @@ spell_data:
     skill: Targeted Magic
     abbrev: AE
     mana: 15
+    mana_type: holy
   Aether Cloak:
     skill: Warding
     harmless: true
     abbrev: AC
     cyclic: true
     mana: 4
+    mana_type: elemental
   Aether Wolves:
     skill: Debilitation
     harmless: true
     abbrev: AEWO
     cyclic: true
     mana: 2
+    mana_type: elemental
   Aethrolysis:
     skill: Targeted Magic
     abbrev: Aethrolysis
     mana: 2
+    mana_type: arcane
   Avren Aevareae:
     skill: Debilitation
     harmless: true
@@ -414,12 +440,14 @@ spell_data:
     ritual: true
     mana: 300
     recast: 2
+    mana_type: holy
   Albreda's Balm:
     skill: Debilitation
     harmless: true
     abbrev: ALB
     cyclic: true
     mana: 5
+    mana_type: elemental
   Anther's Call:
     skill: Debilitation
     abbrev: ANC
@@ -439,6 +467,7 @@ spell_data:
     mana: 6
     prep: prepare
     starlight_threshold: 0
+    mana_type: lunar
   Arc Light:
     skill: Debilitation
     harmless: true
@@ -456,7 +485,7 @@ spell_data:
     abbrev: ALL
     mana: 50
     ritual: true
-    mana_type: holy
+    mana_type: arcane
   Aspirant's Aegis:
     skill: Warding
     abbrev: AA
@@ -497,33 +526,39 @@ spell_data:
     skill: Utility
     abbrev: AF
     mana: 30
+    mana_type: life
   Banner of Truce:
     skill: Utility
     abbrev: BOT
     mana: 15
     recast: 1
+    mana_type: holy
   Bear Strength:
     skill: Augmentation
     abbrev: BES
     cyclic: true
     mana: 5
+    mana_type: life
   Beckon the Naga:
     skill: Targeted Magic
     heavy: true
     mana: 30
     abbrev: BTN
+    prep_type: prepare
     mana_type: elemental
   Benediction:
     skill: Augmentation
     abbrev: Benediction
     recast: 1
     mana: 15
+    mana_type: holy
   Blend:
     skill: Utility
     abbrev: Blend
     invisibility: true
     mana: 15
     recast: 1
+    mana_type: life
   Bless:
     skill: Utility
     abbrev: bless
@@ -535,6 +570,7 @@ spell_data:
     abbrev: BOTF
     cyclic: true
     mana: 5
+    mana_type: elemental
   Blood Burst:
     skill: Targeted Magic
     abbrev: BLB
@@ -550,6 +586,7 @@ spell_data:
     skill: Targeted Magic
     abbrev: BG
     mana: 30
+    mana_type: elemental
   Blur:
     skill: Augmentation
     mana: 5
@@ -562,11 +599,13 @@ spell_data:
     abbrev: BA
     mana: 15
     recast: 1
+    mana_type: holy
   Braun's Conjecture:
     skill: Utility
     abbrev: BC
     mana: 150
     ritual: true
+    mana_type: lunar
   Breath of Storms:
     skill: Targeted Magic
     abbrev: BOS
@@ -588,6 +627,7 @@ spell_data:
     abbrev: BUE
     mana: 5
     recast: 1
+    mana_type: arcane
   Cage of Light:
     skill: Warding
     abbrev: CoL
@@ -600,11 +640,13 @@ spell_data:
     abbrev: CH
     mana: 15
     recast: 1
+    mana_type: arcane
   Call from Beyond:
     skill: Utility
     abbrev: CFB
     mana: 15
     recast: 1
+    mana_type: arcane
   Calm:
     skill: Debilitation
     harmless: true
@@ -616,6 +658,7 @@ spell_data:
     abbrev: CARE
     cyclic: true
     mana: 2
+    mana_type: elemental
   Carrion Call:
     skill: Targeted Magic
     abbrev: CAC
@@ -631,11 +674,13 @@ spell_data:
     skill: Targeted Magic
     abbrev: CL
     mana: 15
+    mana_type: elemental
   Cheetah Swiftness:
     skill: Augmentation
     abbrev: CS
     cyclic: true
     mana: 5
+    mana_type: life
   Chill Spirit:
     skill: Targeted Magic
     abbrev: CHS
@@ -646,6 +691,7 @@ spell_data:
     abbrev: COS
     mana: 150
     ritual: true
+    mana_type: life
   Clarity:
     skill: Augmentation
     abbrev: clarity
@@ -657,6 +703,7 @@ spell_data:
     abbrev: COTC
     mana: 15
     recast: 1
+    mana_type: life
   Clear Vision:
     skill: Augmentation
     abbrev: CV
@@ -679,10 +726,12 @@ spell_data:
     abbrev: CF
     mana: 15
     recast: 1
+    mana_type: arcane
   Contingency:
     skill: Utility
     mana: 15
     abbrev: CONTINGENCY
+    mana_type: lunar
   Courage:
     skill: Augmentation
     abbrev: CO
@@ -694,16 +743,19 @@ spell_data:
     abbrev: CRD
     mana: 2
     starlight_threshold: 0
+    mana_type: lunar
   Crusader's Challenge:
     skill: Augmentation # Also Utility
     abbrev: CRC
     mana: 30
     recast: 1
+    mana_type: holy
   Cure Disease:
     skill: Utility
     harmless: true
     abbrev: CD
     mana: 15
+    mana_type: life
   Curse of the Wilds:
     skill: Debilitation
     harmless: true
@@ -722,11 +774,13 @@ spell_data:
     abbrev: DALU
     cyclic: true
     mana: 6
+    mana_type: elemental
   Dazzle: # Requires either the sun or moons to be visible and being outdoors
     skill: Debilitation
     harmless: true
     abbrev: dazzle
     mana: 1
+    mana_type: lunar
   Deadfall:
     skill: Debilitation
     harmless: true
@@ -744,11 +798,13 @@ spell_data:
     abbrev: DEMA
     mana: 20
     harmless: true
+    mana_type: elemental
   Destiny Cipher:
     skill: Utility
     abbrev: DC
     mana: 50
     ritual: true
+    mana_type: lunar
   Devitalize:
     skill: Targeted Magic
     abbrev: DEVI
@@ -759,11 +815,13 @@ spell_data:
     abbrev: DE
     mana: 5
     harmless: true
+    mana_type: life
   Devour:
     skill: Utility
     abbrev: devour
     mana: 30
     recast: 1
+    mana_type: arcane
   Dispel:
     skill: Utility
     abbrev: DISPEL
@@ -774,6 +832,7 @@ spell_data:
     abbrev: DG
     mana: 15
     recast: 1
+    mana_type: lunar
   Dinazen Olkar:
     skill: Targeted Magic
     abbrev: DO
@@ -784,6 +843,7 @@ spell_data:
     abbrev: DA
     mana: 15
     recast: 1
+    mana_type: holy
   Divine Guidance:
     skill: Augmentation
     abbrev: DIG
@@ -799,6 +859,7 @@ spell_data:
     skill: Targeted Magic
     heavy: true
     mana: 15
+    mana_type: elemental
   Drums of the Snake:
     skill: Augmentation
     mana: 15
@@ -845,6 +906,7 @@ spell_data:
     abbrev: ELI
     recast: 1
     starlight_threshold: 0
+    mana_type: lunar
   Electrostatic Eddy:
     skill: Debilitation
     harmless: true
@@ -852,12 +914,14 @@ spell_data:
     cyclic: true
     triggers_justice: true
     mana: 6
+    mana_type: elemental
   Enrichment:
     skill: Augmentation
     abbrev: ENRICH
     mana: 30
     recast: -1
     starlight_threshold: 3
+    mana_type: lunar
   Essence of Yew:
     skill: Warding
     abbrev: EY
@@ -875,6 +939,7 @@ spell_data:
       - What were you referring to?
       - What do you want to close?
     expire: fissure collapses in on itself, winking out of existence
+    mana_type: elemental
   Ethereal Shield:
     skill: Warding
     abbrev: ES
@@ -886,21 +951,25 @@ spell_data:
     abbrev: EYE
     cyclic: true
     mana: 3
+    mana_type: elemental
   Eyes of the Blind:
     skill: Utility
     abbrev: EOTB
     invisibility: true
     mana: 5
     recast: 1
+    mana_type: arcane
   Eylhaar's Feast:
     skill: Utility
     abbrev: EF
     mana: 15
+    mana_type: holy
   Faenella's Grace:
     skill: Augmentation
     abbrev: FAE
     cyclic: true
     mana: 2
+    mana_type: elemental
   Fire Ball:
     skill: Targeted Magic
     abbrev: FB
@@ -912,6 +981,7 @@ spell_data:
     cyclic: true
     mana: 7
     prep_type: prepare
+    mana_type: elemental
   Fire Shards:
     skill: Targeted Magic
     abbrev: FS
@@ -921,6 +991,7 @@ spell_data:
     skill: Targeted Magic
     abbrev: FOU
     mana: 30
+    mana_type: holy
   Fists of Faenella:
     skill: Targeted Magic
     abbrev: FF
@@ -944,12 +1015,14 @@ spell_data:
     abbrev: FP
     mana: 15
     recast: 1
+    mana_type: life
   Focus Moonbeam:
     skill: Utility
     abbrev: FM
     mana: 1
     moon: true
     recast: 1
+    mana_type: lunar
   Footman's Strike:
     skill: Targeted Magic
     abbrev: FST
@@ -965,11 +1038,13 @@ spell_data:
     abbrev: FOI
     mana: 30
     recast: 1
+    mana_type: elemental
   Fountain of Creation:
     skill: Utility
     abbrev: FOC
     mana: 30
     expire: You no longer feel especially strained from invoking the Fountain of Creation
+    mana_type: life
   Frostbite:
     skill: Debilitation
     harmless: true
@@ -1019,6 +1094,7 @@ spell_data:
     abbrev: GJ
     cyclic: true
     mana: 5
+    mana_type: elemental
   Grizzly Claws:
     skill: Debilitation
     abbrev: GRIZ
@@ -1030,17 +1106,20 @@ spell_data:
     abbrev: GF
     mana: 30
     recast: 1
+    mana_type: elemental
   Guardian Spirit:
     skill: Utility
     abbrev: GS
     cyclic: true
     prep_type: prepare
     mana: 5
+    mana_type: life
   Halo:
     skill: Debilitation # Also warding
     abbrev: HALO
     mana: 30
     harmless: false
+    mana_type: holy
   Halt:
     skill: Debilitation
     harmless: true
@@ -1062,6 +1141,7 @@ spell_data:
     skill: Augmentation
     abbrev: HOL
     mana: 5
+    recast: 1
     mana_type: life
   Harawep's Bonds:
     skill: Debilitation
@@ -1078,27 +1158,33 @@ spell_data:
     skill: Targeted Magic
     abbrev: HH
     mana: 15
+    mana_type: holy
   Harmony:
     skill: Augmentation
     abbrev: Harmony
     mana: 30
     recast: 1
+    mana_type: elemental
   Heal:
     skill: Utility
     mana: 15
     abbrev: heal
+    mana_type: life
   Heal Scars:
     skill: Utility
     abbrev: HS
     mana: 1
+    mana_type: life
   Heal Wounds:
     skill: Utility
     mana: 1
     abbrev: HW
+    mana_type: life
   Heart Link:
     skill: Utility
     mana: 15
     abbrev: HL
+    mana_type: life
   Heighten Pain:
     skill: Debilitation
     harmless: true
@@ -1117,11 +1203,13 @@ spell_data:
     abbrev: HODI
     cyclic: true
     mana: 5
+    mana_type: elemental
   Holy Warrior:
     skill: Warding
     abbrev: HOW
     mana: 5
     cyclic: true
+    mana_type: holy
   Horn of the Black Unicorn:
     skill: Targeted Magic
     abbrev: HORN
@@ -1140,6 +1228,7 @@ spell_data:
     cyclic: true
     triggers_justice: true
     mana: 6
+    mana_type: holy
   Ice Patch:
     skill: Debilitation
     harmless: true
@@ -1207,6 +1296,7 @@ spell_data:
         - You step inside
         - You draw your hand
         - Invoke what
+    mana_type: lunar
   Iron Constitution:
     skill: Warding
     abbrev: IC
@@ -1251,6 +1341,7 @@ spell_data:
     abbrev: locate
     mana: 15
     recast: 1
+    mana_type: lunar
   Machinist's Touch:
     skill: Augmentation
     abbrev: MT
@@ -1262,6 +1353,7 @@ spell_data:
     abbrev: MAB
     mana: 15
     expire: A heavy earthen ballista loses its cohesion and crumples into a pile of debris.
+    mana_type: elemental
   Major Physical Protection:
     skill: Augmentation
     abbrev: MAPP
@@ -1273,6 +1365,7 @@ spell_data:
     mana: 5
     abbrev: malediction
     harmless: true
+    expire: malevolent darkness wane
     mana_type: holy
   Manifest Force:
     skill: Warding
@@ -1292,16 +1385,19 @@ spell_data:
       - The Earth energy flows from your body, returning to its rightful place in the ground beneath your feet
       - Release what?
     recast: 2
+    mana_type: elemental
   Mark of Arhat:
     skill: Debilitation
     harmless: true
     abbrev: MOA
     mana: 1
+    mana_type: elemental
   Marshal Order:
     skill: Augmentation
     abbrev: MO
     mana: 15
     recast: 1
+    mana_type: holy
   Mask of the Moons:
     abbrev: MOM
     cyclic: true
@@ -1309,11 +1405,13 @@ spell_data:
     moon: true
     skill: Warding
     recast: 1
+    mana_type: lunar
   Mass Rejuvenation:
     skill: Utility
     abbrev: MRE
     mana: 15
     recast: 1
+    mana_type: holy
   Membrach's Greed:
     abbrev: MEG
     mana: 5
@@ -1326,11 +1424,13 @@ spell_data:
     mana: 300
     ritual: true
     recast: 2
+    mana_type: life
   Mental Blast:
     skill: Debilitation
     harmless: true
     abbrev: MB
     mana: 20
+    mana_type: lunar
   Mental Focus:
     skill: Augmentation
     abbrev: MEF
@@ -1342,6 +1442,7 @@ spell_data:
     abbrev: MC
     mana: 10
     harmless: false
+    mana_type: holy
   Mind Shout:
     skill: Debilitation
     harmless: true
@@ -1350,6 +1451,7 @@ spell_data:
     heavy: true
     expire: recovered to craft another major manifestation of offensive magic
     triggers_justice: true
+    mana_type: lunar
   Minor Physical Protection:
     skill: Warding
     abbrev: MPP
@@ -1368,27 +1470,32 @@ spell_data:
     abbrev: moonblade
     mana: 15
     moon: true
+    mana_type: lunar
   Moongate:
     skill: Utility
     abbrev: MG
     cyclic: true
     mana: 5
+    mana_type: lunar
   Murrula's Flames:
     skill: Utility
     abbrev: MF
     mana: 300
     ritual: true
     recast: 1
+    mana_type: holy
   Naming of Tears:
     abbrev: NAME
     skill: Warding
     mana: 30
     recast: 1
+    mana_type: elemental
   Necrotic Reconstruction:
     skill: Utility
     abbrev: NR
     mana: 15
     recast: 1
+    mana_type: arcane
   Nexus:
     skill: Utility
     abbrev: NEXUS
@@ -1400,6 +1507,7 @@ spell_data:
     harmless: true
     abbrev: NB
     mana: 10
+    mana_type: life
   Nonchalance:
     abbrev: NON
     mana: 5
@@ -1411,6 +1519,7 @@ spell_data:
     skill: Utility
     abbrev: NOU
     recast: 1
+    mana_type: lunar
   Oath of the Firstborn:
     skill: Augmentation
     abbrev: OATH
@@ -1427,6 +1536,7 @@ spell_data:
     skill: Utility
     mana: 30
     abbrev: OM
+    mana_type: holy
   Paeldryth's Wrath:
     skill: Targeted Magic
     abbrev: PW
@@ -1448,12 +1558,14 @@ spell_data:
     recast: 5
     mana: 300
     ritual: true
+    mana_type: life
   Persistence of Mana:
     skill: Augmentation
     abbrev: POM
     recast: 2
     mana: 150
     ritual: true
+    mana_type: holy
   Petrifying Visions:
     skill: Debilitation
     abbrev: PV
@@ -1473,6 +1585,7 @@ spell_data:
     abbrev: PHP
     mana: 5
     recast: 1
+    mana_type: arcane
   Piercing Gaze:
     skill: Utility
     abbrev: PG
@@ -1486,6 +1599,7 @@ spell_data:
     mana: 7
     prep_type: prepare
     triggers_justice: true
+    mana_type: elemental
   Platinum Hands of Kertigen:
     abbrev: PHK
     mana: 15
@@ -1508,6 +1622,7 @@ spell_data:
     abbrev: QE
     mana: 5
     recast: 1
+    mana_type: arcane
   Rage of the Clans:
     skill: Augmentation
     mana: 15
@@ -1532,6 +1647,7 @@ spell_data:
       - You sit
       - You are already sitting
     expire: The world dulls almost imperceptibly as the last remnants of the Read the Ripples ritual fade from your mind's eye
+    mana_type: lunar
   Rebuke:
     skill: Targeted Magic
     abbrev: REB
@@ -1549,6 +1665,7 @@ spell_data:
     mana: 5
     invisibility: true
     recast: 1
+    mana_type: lunar
   Refresh:
     abbrev: Refresh
     skill: Augmentation
@@ -1567,10 +1684,12 @@ spell_data:
     abbrev: regenerate
     cyclic: true
     mana: 5
+    mana_type: life
   Rejuvenation:
     skill: Utility
     abbrev: REJUV
     mana: 5
+    mana_type: holy
   Rend:
     skill: Utility
     abbrev: rend
@@ -1593,6 +1712,7 @@ spell_data:
     abbrev: REZZ
     cyclic: true
     mana: 5
+    mana_type: holy
   Revelation:
     skill: Utility
     abbrev: revelation
@@ -1604,10 +1724,12 @@ spell_data:
     abbrev: RPU
     mana: 15
     recast: 1
+    mana_type: arcane
   Riftal Summons:
     skill: Utility
     abbrev: RS
     mana: 40
+    mana_type: lunar
   Righteous Wrath:
     skill: Augmentation
     abbrev: RW
@@ -1620,12 +1742,14 @@ spell_data:
     prep_type: prepare
     cyclic: true
     mana: 6
+    mana_type: elemental
   Ring of Spears:
     skill: Targeted Magic
     abbrev: ROS
     prep_type: prepare
     cyclic: true
     mana: 7
+    mana_type: elemental
   Rising Mists:
     skill: Utility
     harmless: true
@@ -1657,7 +1781,7 @@ spell_data:
     abbrev: SCO
     mana: 30
     recast: 1
-    mana_type: lunar
+    mana_type: arcane
   Sanctify Pattern:
     skill: Augmentation
     abbrev: SAP
@@ -1670,11 +1794,13 @@ spell_data:
     cyclic: true
     mana: 5
     recast: 1
+    mana_type: elemental
   Sanyu Lyba:
     skill: Warding
     abbrev: SL
     mana: 30
     recast: 1
+    mana_type: holy
   Seal Cambrinth:
     skill: Utility
     ritual: true
@@ -1686,11 +1812,13 @@ spell_data:
     abbrev: SEER
     mana: 15
     recast: 1
+    mana_type: lunar
   See the Wind:
     Skill: Augmentation
     abbrev: STW
     mana: 1
     recast: 1
+    mana_type: life
   Senses of the Tiger:
     skill: Augmentation
     abbrev: SOTT
@@ -1713,10 +1841,12 @@ spell_data:
     skill: Utility
     abbrev: SHM
     mana: 30
+    mana_type: lunar
   Shadow Servant:
     skill: Utility
     abbrev: SS
     mana: 30
+    mana_type: lunar
   Shadowling:
     skill: Utility
     abbrev: shadowling
@@ -1734,6 +1864,7 @@ spell_data:
       - Invoke what
       - You gesture, adjusting the pattern that binds the shadowling to this plane
       - You're not sure what would happen
+    mana_type: lunar
   Shadows:
     skill: Augmentation
     abbrev: shadows
@@ -1757,11 +1888,13 @@ spell_data:
     abbrev: SOL
     mana: 15
     recast: 3
+    mana_type: holy
   Shift Moonbeam:
     skill: Utility
     abbrev: SM
     mana: 15
     recast: 1
+    mana_type: lunar
   Shockwave:
     skill: Targeted Magic
     abbrev: shockwave
@@ -1777,6 +1910,7 @@ spell_data:
     abbrev: SKS
     mana: 15
     recast: 1
+    mana_type: life
   Sleep:
     skill: Debilitation
     harmless: true
@@ -1808,6 +1942,7 @@ spell_data:
   Soul Bonding:
     skill: Debilitation
     abbrev: SB
+    mana_type: holy
     mana: 1
   Soul Shield:
     skill: Warding
@@ -1845,6 +1980,7 @@ spell_data:
     abbrev: starcrash
     mana: 30
     starlight_threshold: 0
+    mana_type: lunar
   Starlight Sphere:
     skill: Targeted Magic
     abbrev: SLS
@@ -1852,17 +1988,20 @@ spell_data:
     prep_type: prepare
     night: true
     mana: 6
+    mana_type: lunar
   Stellar Collector:
     abbrev: STC
     mana: 30
     skill: Utility
     recast: 1
+    mana_type: lunar
   Steps of Vuan:
     skill: Utility
     abbrev: SOV
     mana: 5
     cyclic: true
     invisibility: true
+    mana_type: lunar
   Stone Strike:
     skill: Targeted Magic
     abbrev: STS
@@ -1936,6 +2075,7 @@ spell_data:
     skill: Utility
     abbrev: TELEPORT
     mana: 5
+    mana_type: lunar
   Tenebrous Sense:
     skill: Augmentation
     abbrev: TS
@@ -1971,8 +2111,9 @@ spell_data:
     abbrev: TRC
     recast: 1
     starlight_threshold: 0
+    mana_type: lunar
   Tranquility:
-    skill: Augmentation #Warding
+    skill: Warding # Augmentation
     abbrev: TRANQUILITY
     mana: 15
     recast: 1
@@ -1988,6 +2129,7 @@ spell_data:
     abbrev: TR
     mana: 5
     cyclic: true
+    mana_type: holy
   Turmar Illumination:
     abbrev: TU IL
     mana: 5
@@ -2006,6 +2148,7 @@ spell_data:
     triggers_justice: true
     prep_type: prepare
     mana: 7
+    mana_type: arcane
   Unleash:
     skill: Utility
     abbrev: unleash
@@ -2017,6 +2160,7 @@ spell_data:
     abbrev: VOI
     mana: 15
     recast: 1
+    mana_type: elemental
   Vertigo:
     skill: Debilitation
     harmless: true
@@ -2028,6 +2172,7 @@ spell_data:
     abbrev: VOS
     mana: 5
     recast: 1
+    mana_type: holy
   Vigil:
     skill: Utility
     abbrev: VIGIL
@@ -2055,11 +2200,13 @@ spell_data:
     skill: Utility
     mana: 5
     abbrev: VH
+    mana_type: life
   Vivisection:
     skill: Targeted Magic
     abbrev: vivisection
     mana: 20
     use_stealth: true
+    mana_type: arcane
   Ward Break:
     skill: Debilitation
     harmless: true
@@ -2075,8 +2222,10 @@ spell_data:
   Whole Displacement:
     skill: Warding
     abbrev: WD
+    moon: true
     mana: 5
     recast: 1
+    mana_type: lunar
   Will of Winter:
     skill: Augmentation
     abbrev: WILL
@@ -2107,6 +2256,7 @@ spell_data:
     abbrev: WORM
     mana: 30
     recast: 1
+    mana_type: arcane
   Y'ntrel Sechra:
     skill: Augmentation
     abbrev: YS
@@ -2118,6 +2268,7 @@ spell_data:
     abbrev: zephyr
     mana: 5
     expire: the breeze fades from the area
+    mana_type: elemental
 
 
 rituals:

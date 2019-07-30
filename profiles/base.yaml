@@ -152,6 +152,8 @@ combat_trainer_action_count: 10
 dual_load: false
 # use_stealth_attacks true will train stealth by hiding and attacking/backstabbing from stealth.  Thieves also use backstab: below
 use_stealth_attacks: false
+#decides if you want to hide/train stealth by snipe/poach
+use_stealth_ranged: false
 # any special ranged aimed attack to use from stealth
 stealth_attack_aimed_action: poach
 # switch to hide_type: stalk to use slip stalk
@@ -180,8 +182,14 @@ loot_bodies: true
 dump_junk: false
 # items to wait for before junking
 dump_item_count: 9
-# use the analyze combos to train
+# used to set a pause timer for barbarian meditations, this number should go down with a chakrel, circles, and stats... 
+# as an example, chuno currently runs it at 6 being circle 195
+# defaulting to 25, as 20 for lower skilled barbs was explained to be common
+meditation_pause_timer: 25
+# This is deprecated, instead switch to use_analyze_combos
 use_barb_combos: false
+# use the analyze combos to train for all guilds, brawling analyze isn't supported
+use_analyze_combos: false
 # list of weapon skills to use with whirlwind.  See Chuno-setup
 whirlwind_trainables:
 # a - list of weapon skills to pull out and use in offhand while waiting for a crossbow to aim.  Make sure they're light!
@@ -291,7 +299,9 @@ cambrinth_cap: 32
 # is your cambrinth in a container?
 stored_cambrinth: false
 # used with use_auto_mana. Multiplies your discern limit by this number to get a safe mana amount.
-prep_scaling_factor: 0.98
+prep_scaling_factor: 0.85
+# used with use_auto_mana. How often it will check discerns in hours. Lower circle/ranks should check more often.
+check_discern_timer_in_hours: 24 # i.e., checking every 24 hours
 # force kneeling to engage khris
 kneel_khri: false
 cambrinth_items:
@@ -302,6 +312,9 @@ cambrinth_items:
 cambrinth_num_charges: 4 
 # invoke a specific cambrinth amount -- useful for traders with Avtalia Array
 cambrinth_invoke_exact_amount: false
+# Trader only - enables starlight management - how many seconds in between checking starlight auras in combat
+# see https://github.com/rpherbig/dr-scripts/wiki/Trader-Tutorials 
+aura_frequency:
 
 
 
@@ -319,6 +332,7 @@ box_hunt_minimum: 1
 
 
 # Non-combat settings
+crossing_training_max_threshold: 28
 # Don't let crossing-trainer train these skills more often than this in seconds
 exp_timers:
   Stealth: 300
@@ -336,8 +350,14 @@ safe_room: 851
 hand_armor: gloves
 # define an instrument to pick up before playing (if you're not using zills)
 instrument:
+# an instrument that can be played while worn, such as zills, or a cowbell.
+worn_instrument: zills
 # used in several places.  If defined, go2 will remove this before wearing ice-skates when traveling into Forfedhar
 footwear:
+# if true, will attempt to pull money from the nearest bank if you have no money for fares
+bescort_fare_handling: false
+# hide when on the ferries and suchlike
+bescort_hide: true
 # exit the game when crossing-training is capped
 exit_on_skills_capped: false
 # defines a spell to train sorcery if Sorcery is on your crossing-training list
@@ -359,6 +379,8 @@ crossing_training_requires_movement:
 - Thievery
 - Theurgy
 - Trading
+# Adjust this higher if you are getting hangups starting performance in athletics or first aid
+performance_pause: 3
 # what item to forage/collect with ;outdoorsmanship
 forage_item: rock
 # what item to braid in ;mech-lore
@@ -391,7 +413,7 @@ avoid_athletics_in_justice: false
 athletics_outdoorsmanship_rooms:
 attunement_rooms:
 training_rooms:
-
+journal_noun: journal
 
 
 
@@ -447,9 +469,8 @@ tinkering_tools:
 - shaper
 - pliers
 - carving knife
-knitting_tools:
-- knitting needle
 outfitting_tools:
+- knitting needle
 shaping_tools:
 - carving knife
 - shaper
@@ -469,10 +490,12 @@ forging_belt:
 engineering_belt:
 outfitting_belt:
 alchemy_belt:
+enchanting_belt:
 mark_crafted_goods: false
 engineering_room:
 outfitting_room:
 alchemy_room:
+enchanting_room:
 use_own_ingot_type:
 deed_own_ingot: false
 # spells that get woven in to various scripts, do not use cambrinth
@@ -481,7 +504,13 @@ crafting_training_spells:
 craft_max_mindstate: 31
 # amount of yarn to keep on hand for craft.lic, don't exceed 300
 yarn_quantity: 100
-
+# amount of balsa lumber to keep on hand in trade.lic.
+lumber_quantity: 15
+# container used to hold alcohol or water for remedy.lic (optional)
+alcohol_container:
+water_container:
+# container used to hold herbs for remedy.lic (optional)
+herb_container:
 
 # Workorder settings
 # https://elanthipedia.play.net/Lich_script_repository#workorders
@@ -496,7 +525,32 @@ workorder_min_items: 2
 workorder_max_items: 3
 workorder_recipes:
 workorder_cash_on_hand:
+# Whether to retain unused crafting materials or dispose of them.
+#   Only implemented for remedies
+retain_crafting_materials: false
 
+#CARAVAN SETTINGS
+# container holding caravan contracts for ;trade
+trade_contract_container: backpack
+# number of copper to carry on-hand while running ;trade
+caravan_coins_on_hand: 9555
+# Have you purchased a 750plat interior from the trade minister?
+caravan_interior: false
+# skills and cooldowns to train in ;trade.  See https://github.com/rpherbig/dr-scripts/wiki/Trader-Tutorials for valid skills and what they do
+caravan_training_skills:
+  # Augmentation: 5 
+  # Warding: 5
+  # Utility: 5
+  Performance: 120
+  Appraisal: 60
+  Mechanical Lore: 5
+  Attunement: 100
+  Outdoorsmanship: 5
+  Locksmithing: 30
+  Perception: 45
+  First Aid: 120
+  # Outfitting: 200
+  # Engineering: 200
 
 
 # Lumber settings
@@ -618,6 +672,8 @@ mining_buddy_vein_list:
 - Xenomite
 mining_ignored_stone_sizes:
 - pebble
+mining_ignored_deed_sizes:
+- pebble
 mining_implement: shovel
 mine_use_packet: true
 mine_while_training: false
@@ -639,6 +695,9 @@ picking_box_source: duffel bag
 # Keep this empty to drop too-hard boxes on the ground
 picking_box_storage:
 picking_pet_box_source:
+# name of the picking training container
+picking_lockbox: training box
+picking_worn_lockbox: false
 pet_boxes_on_hand: 69
 lockpick_dismantle:
 lockpick_buffs:
@@ -671,10 +730,14 @@ gear_sets:
 # Spell list healme uses to heal if you don't have a waggle set defined for it.
 empath_healing:
 # Uses a scoring based system to determine when to go get healed after combat, 0 means always. 10 is 10 minor abraisions or 5 tiny scratches, etc
+# Run ;en echo DRCH.check_health to see your current wound value
 saferoom_health_threshold: 7
 
 # https://elanthipedia.play.net/Lich_script_repository#restock
 restock:
+
+# restock equivalent for combinable herbs, see profiles/HerbUser-setup.yaml
+herbs:
 
 # Skip harnessing before infusing or not
 osrel_no_harness: false
@@ -684,6 +747,7 @@ tie_gem_pouches: true
 spare_gem_pouch_container:
 gem_pouch_adjective:
 
+# https://elanthipedia.play.net/Lich_script_repository#scout
 trail_override:
 # NPCs to ignore in combat, WM familiars are a common one. Without ignoring them you may appraise them.
 ignored_npcs:
@@ -693,14 +757,26 @@ ignored_npcs:
 - leopard
 - panther
 - raccoon
+- piglet
+- dog
+- cat
+- crow
+- goose
+- gerbil
+- guinea-pig
 
 favor_god: Hodierna
-# Offer primers on favor altars instead of doing the puzzle, allows more immortal choices
+# Offer primers on favor altars instead of doing the puzzle, allows more immortal choices and is faster at higher favor counts
 use_favor_altars: false
 # What bead to carve in theurgy.lic
 immortal_aspect:
 favor_goal:
 theurgy_supply_container: backpack
+# To keep extra stock of certain items, for example wine for a prayermat in combat
+#theurgy_supply_levels:
+#  wine:
+#    min: 3
+#    target: 4
 theurgy_supply_levels:
 
 # For better-book.lic
@@ -713,55 +789,55 @@ cleaning_cloth: chamois cloth
 
 # Copy the whole list into your yaml to add/remove things.
 listen_skills:
-- Large Edged
-- Twohanded Edged
-- Small Blunt
-- Light Thrown
+- Alchemy
+- Appraisal
+- Arcana
+- Athletics
+- Attunement
+- Augmentation
+- Bows
 - Brawling
-- Offhand Weapon
+- Brigandine
+- Chain Armor
+- Crossbow
+- Debilitation
+- Defending
+- Enchanting
+- Engineering
+- Evasion
+- First Aid
+- Forging
+- Heavy Thrown
+- Large Blunt
+- Large Edged
+- Life Magic
+- Light Armor
+- Light Thrown
+- Locksmithing
 - Melee Mastery
 - Missile Mastery
-- Life Magic
-- Attunement
-- Arcana
-- Augmentation
+- Offhand Weapon
+- Outdoorsmanship
+- Outfitting
+- Parry Ability
+- Perception
+- Performance
+- Plate Armor
+- Polearms
+- Scholarship
+- Shield Usage
+- Skinning
+- Slings
+- Small Blunt
+- Small Edged
+- Staves
+- Stealth
+- Tactics
+- Targeted Magic
+- Twohanded Blunt
+- Twohanded Edged
 - Utility
 - Warding
-- Athletics
-- Perception
-- First Aid
-- Outdoorsmanship
-- Scholarship
-- Mechanical Lore
-- Appraisal
-- Performance
-- Tactics
-- Stealth
-- Bows
-- Evasion
-- Parry Ability
-- Small Edged
-- Defending
-- Light Armor
-- Chain Armor
-- Shield Usage
-- Targeted Magic
-- Debilitation
-- Brigandine
-- Plate Armor
-- Large Blunt
-- Twohanded Blunt
-- Slings
-- Crossbow
-- Staves
-- Polearms
-- Heavy Thrown
-- Locksmithing
-- Skinning
-- Forging
-- Engineering
-- Outfitting
-- Alchemy
 
 # https://github.com/rpherbig/dr-scripts/wiki/Waggle-Sets
 waggle_sets:
@@ -1025,8 +1101,11 @@ grave_junk:
 # override athletics autodetermination, see data/base-athletics.lic for a list of options.
 climbing_target:
 swimming_target:
+# You may need to manually ;vars set climbing_song to a different song for optimal learning
 have_climbing_rope: false
 climbing_rope_adjective: climbing
+# Used to hold items while training athletics, increases difficulty of climbing
+held_athletics_items:
 
 # Astrology settings
 # https://elanthipedia.play.net/Lich_script_repository#astrology
@@ -1118,7 +1197,9 @@ theurgy_use_prayer_mat: false
 theurgy_prayer_mat_room:
 pray_to_chadatru: false
 
+# https://elanthipedia.play.net/Lich_script_repository#trade
 trade_contract_container: backpack
+# https://elanthipedia.play.net/Lich_script_repository#fill-dirt
 dirt_stacker:
 
 # override the npc healer to use
@@ -1128,7 +1209,10 @@ forge_container:
 spell_cycle:
 
 restock_shop:
+# For almanacs that let you pick which skill to use
+almanac_skills:
 
+sanowret_adjective: sanowret
 sanowret_no_use_scripts:
 - sew
 - carve
@@ -1136,6 +1220,7 @@ sanowret_no_use_scripts:
 - forge
 - remedy
 - shape
+- enchant
 - outdoorsmanship
 - combat-trainer
 
@@ -1148,6 +1233,7 @@ almanac_no_use_scripts:
 - shape
 - combat-trainer
 - go2
+- get2
 - bescort
 - steal
 - astrology
@@ -1157,6 +1243,7 @@ almanac_no_use_scripts:
 - scouting
 - athletics
 - outdoorsmanship
+- mech-lore
 
 walkingastro_no_use_scripts:
 - sew
@@ -1176,3 +1263,13 @@ walkingastro_no_use_scripts:
 - craft
 - pick
 - bescort
+- workorders
+
+# https://elanthipedia.play.net/Lich_script_development#sorter
+sorter:
+  width: 0
+  mute_old_inventory: true
+  sort_inv_command: true
+  sort_look_others: true
+  sort_look_items_command: true
+  ignore_categories: lootables|trash
